@@ -5,7 +5,7 @@ servoPIN = 18
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(servoPIN, GPIO.OUT)
 
-p = GPIO.PWM(servoPIN, 50) # GPIO 17 for PWM with 50Hz
+p = GPIO.PWM(servoPIN, 50) # GPIO 18 for PWM with 50Hz
 p.start(0) # Initialization
 
 try:
@@ -16,7 +16,7 @@ try:
     time.sleep(0.5)
     p.ChangeDutyCycle(25)
     time.sleep(0.5)
-    p.ChangeDutyCycle(35)
+    p.ChangeDutyCycle(40)
     time.sleep(0.5)
     p.ChangeDutyCycle(25)
     time.sleep(0.5)
