@@ -14,7 +14,7 @@ import time
 import serial
 import sys
 import socket
-import thread
+
 import threading
 
 font = cv2.FONT_HERSHEY_SIMPLEX
@@ -33,12 +33,12 @@ period=200
 periodH=200
 myTime=0
 ser=""
-mode = 2
+mode = 0
 px = 0
 py = 0
 h = 0
 motorAngels = ""
-host = '192.168.137.61'
+host = '192.168.137.1'
 port = 9000
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -116,7 +116,7 @@ def pid(tmpX,tmpY , kp , kd , ki , dt , _max , _min ):
     global ser
     global motorAngels
     
-    
+    print('pid is starting')
     millis = 0
     millis = int(round(time.time() * 1000))
     
@@ -187,8 +187,13 @@ def pid(tmpX,tmpY , kp , kd , ki , dt , _max , _min ):
         da = -1*dx
         print(str(dy)+"\n")
         print(str(dx)+"\n")
-        ser.write(str(dy)+":"+str(da)+":"+str(dx)+":"+str(dz)+":4000\n")
+        ser.write(str.encode(str(dy)+":"+str(da)+":"+str(dx)+":"+str(dz)+":4000\n"))
         motorAngels = str(dy)+ " " + str(dz)+ " " + str(da) + " " + str(dx)
+        
+        
+    data =  "DATAS" + " " + str(px) + " " + str(py) + " " + str(h) + " " + motorAngels        
+    sendData(data)
+
         
         #motorların adımları
         #dy ile dz (x ekseni) karşılıklı - da ile dx  (y ekseni) karşılıklı
@@ -283,7 +288,7 @@ def sektirme(x,y,h):
             dy=2
         else:
             dy=0
-        ser.write(str(dh+dy)+":"+str(dh+dx)+":"+str(dh-dx)+":"+str(dh-dy)+":3000\n")
+        ser.write(str.encode(str(dh+dy)+":"+str(dh+dx)+":"+str(dh-dx)+":"+str(dh-dy)+":3000\n"))
         
 def recv(x):
     global mode
@@ -298,26 +303,18 @@ def recv(x):
         if "DATAS" not in data2:
             if "has connected" not in data2:
                 arr = data2.split()
-                mode = str(arr[1])
+                mode = int(arr[1])
                 print(str(arr[0]) + ", " + str(arr[1]) + ", " + str(arr[2]) + "," + str(arr[3]))
                 
              
         #time.sleep(.1)
                 
 availableFunction= threading.Semaphore(10)
-def sendData(msg):
-    print("senddata start")
-    global px
-    global py
-    global h
-    global motorAngels
-    data = ""
-    while True:
-        
-        print("senddata start")
-        
-        time.sleep(.1)
-
+def sendData(data):
+    sockSender = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sockSender.connect((host, port))    
+    sockSender.send(data.encode())
+    sockSender.close()
         
 def main(msg):
     
@@ -363,9 +360,10 @@ def main(msg):
 #         ser.write("0:0:0:0:1000")
 #         time.sleep(2)
         #print(str(px)+"\t"+str(py)+"\t"+str(h)+"\n")
-        if(mode == '1'): # 
+        if(mode == 1): # 
             pid(px,py,kp,kd,ki,dt,_max,_min)
-        elif(mode == '2'):
+        elif(mode == 2):
+            print('sektirme ')
             if(ready == 0):
                 pid(px,py,30,50,0.01,dt,_max,_min)
                 if(px < setPointX+100 and px >= setPointX-100 and py < setPointY+100 and py >= setPointY-100):
@@ -378,29 +376,30 @@ def main(msg):
                     counter = 0
             if(ready == 1):    
                 sektirme(px,py,h)
-        elif(mode == '3'):
-            print ("not implemented \n")
-        motorAngels = str(dh + dx)+ " " + str(dh - dx)+ " " + str(dh - dy) + " " + str(dh + dy)
-        data =  "DATAS" + " " + str(px) + " " + str(py) + " " + str(h) + " " + motorAngels
-        sockSender = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sockSender.connect((host, port))    
-        sockSender.send(data.encode())
-        sockSender.close()
-        
-        
+      
+                
 
 try:
-    thread.start_new_thread(recv, (12, ))
+    
     
     #kilitle
    # thread.start_new_thread(sendData, ('msg', ))
     #kilidi ac
-    thread.start_new_thread(main, (10, ))
+   t= threading.Thread(target=main, args=(1,))
+   
+   
+   t2= threading.Thread(target=recv, args=(1,))
+   
+   
+   t.start()
+   t2.start()
+   
+   t.join()
+   t2.join()
 except:
     print("Error: unable to start thread")
 
-while 1:
-    pass
+
 #if __name__== "__main__":
     #main()
 
