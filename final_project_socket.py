@@ -29,20 +29,20 @@ _pre_errorX=0
 _integralY=0
 _integralX=0
 _integralH=0
-period=250
+period=200
 periodH=200
 myTime=0
 ser=""
-mode = '1'
+mode =0
 px = 0
 py = 0
 h = 0
 motorAngels = ""
 host = '192.168.137.1'
 port = 9000
-
-#sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-#sock.connect((host, port))
+port2=8000
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+sock.connect((host, port))
 
 def video(cap):
    
@@ -180,12 +180,14 @@ def pid(tmpX,tmpY , kp , kd , ki , dt , _max , _min ):
         print("dy:" + str(dy)+"\n")
         print("dx:" + str(dx)+"\n")
         
-        ser.write(str.encode(str(dy)+":"+str(dx)+":"+str(da)+":"+str(dz)+":30000:5000\n"))
+        code=(str(dy)+":"+str(dx)+":"+str(da)+":"+str(dz)+":30000:10000\n")
+        print("encode code : "+code)
+        ser.write(str.encode(code))
         motorAngels = str(dy)+ " " + str(dz)+ " " + str(da) + " " + str(dx)
         
         
     data =  "DATAS" + " " + str(px) + " " + str(py) + " " + str(h) + " " + motorAngels        
-    #sendData(data)
+    sendData(data)
    
         
         #motorların adımları
@@ -285,7 +287,7 @@ def recv(x):
 def sendData(data):
     #print(data)
     sockSender = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sockSender.connect((host, port))    
+    sockSender.connect((host, port2))    
     sockSender.send(data.encode())
     sockSender.close()
         
@@ -308,7 +310,7 @@ def main(msg):
     py = 0
     
     ki= 0.1
-    kp= 30
+    kp= 40
     kd= 20
     dt = 0.2
     _max = 300
@@ -352,29 +354,29 @@ def main(msg):
       
                 
 
-#try:
+try:
     
     
     #kilitle
    # thread.start_new_thread(sendData, ('msg', ))
     #kilidi ac
-   #t= threading.Thread(target=main, args=(1,))
+   t= threading.Thread(target=main, args=(1,))
    
    
-   #t2= threading.Thread(target=recv, args=(1,))
+   t2= threading.Thread(target=recv, args=(1,))
    
    
-   #t.start()
-   #t2.start()
+   t.start()
+   t2.start()
    
-   #t.join()
-   #t2.join()
-#except:
-    #print("Error: unable to start thread")
+   t.join()
+   t2.join()
+except:
+    print("Error: unable to start thread")
 
 
-if __name__== "__main__":
-    main(1)
+# if __name__== "__main__":
+#     main(1)
 
     
 
