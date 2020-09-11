@@ -21,7 +21,7 @@ font = cv2.FONT_HERSHEY_SIMPLEX
 setPointY=120 #it will get from desktop or mobile for y axes
 setPointX=160 #it will get from desktop or mobile for y axes
 
-setPointH=40
+setPointH=15
 _pre_errorH=0
 
 _pre_errorY=0
@@ -29,11 +29,11 @@ _pre_errorX=0
 _integralY=0
 _integralX=0
 _integralH=0
-period=200
+period=250
 periodH=200
 myTime=0
 ser=""
-mode = 0
+mode = '1'
 px = 0
 py = 0
 h = 0
@@ -41,8 +41,9 @@ motorAngels = ""
 host = '192.168.137.1'
 port = 9000
 
-sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-sock.connect((host, port))
+#sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+#sock.connect((host, port))
+
 def video(cap):
    
     
@@ -56,8 +57,8 @@ def video(cap):
     hsv_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
       
     sensitivity = 15
-    low_red = np.array([2,85,51])
-    high_red = np.array([33,223,253])  
+    low_red = np.array([2,84,80])
+    high_red = np.array([134,255,255])  
       
       
     red_mask = cv2.inRange(hsv_frame,low_red,high_red)
@@ -116,16 +117,15 @@ def pid(tmpX,tmpY , kp , kd , ki , dt , _max , _min ):
     global ser
     global motorAngels
     
-    print('pid is starting')
+    #print('pid is starting')
     millis = 0
     millis = int(round(time.time() * 1000))
     
     dy = 0
     dz = 0
    
-    dt = 0.2
-    _max = 13
-    _min = -13
+    
+    
     if(millis > myTime + period):
         myTime= int(round(time.time() * 1000))
         errorY = setPointY - tmpY
@@ -156,22 +156,14 @@ def pid(tmpX,tmpY , kp , kd , ki , dt , _max , _min ):
         _pre_errorX = errorX
         axisX=10
         axisY=-5
-        print(str(outputY) +" :::: "+str(errorY)+"\n")
-        print(str(outputX) +" :::: "+str(errorX)+"\n")
-        temp = 200
-        if(outputY < 0):
-            dy = math.sqrt(-1*outputY/temp)
-            dy = int(dy*-1)
-        else:
-            dy = int(math.sqrt(outputY/temp))
+        #print(str(outputY) +" :::: "+str(errorY)+"\n")
+        #print(str(outputX) +" :::: "+str(errorX)+"\n")
         
-        if(outputX < 0):
-            dx = math.sqrt(-1*outputX/temp)
-            dx = int(dx *-1)
-        else:
-            dx = int(math.sqrt(outputX/temp))
-        #dy =  int((outputY +3000) * (axisX) / (6000) + axisY)
-        #dx =  int((outputX +3000) * (axisX) / (6000) + axisY)
+       
+       
+        
+        dy= int((outputY+10000)/(20000)*(_max*2)-_max)
+        dx= int((outputX+10000)/(20000)*(_max*2)-_max)
         
         if(dy > _max):
             dy=_max
@@ -185,30 +177,33 @@ def pid(tmpX,tmpY , kp , kd , ki , dt , _max , _min ):
         
         dz = -1*dy
         da = -1*dx
-        print(str(dy)+"\n")
-        print(str(dx)+"\n")
-        ser.write(str.encode(str(dy)+":"+str(da)+":"+str(dx)+":"+str(dz)+":4000\n"))
+        print("dy:" + str(dy)+"\n")
+        print("dx:" + str(dx)+"\n")
+        
+        ser.write(str.encode(str(dy)+":"+str(dx)+":"+str(da)+":"+str(dz)+":30000:5000\n"))
         motorAngels = str(dy)+ " " + str(dz)+ " " + str(da) + " " + str(dx)
         
         
     data =  "DATAS" + " " + str(px) + " " + str(py) + " " + str(h) + " " + motorAngels        
-    sendData(data)
-
+    #sendData(data)
+   
         
         #motorların adımları
         #dy ile dz (x ekseni) karşılıklı - da ile dx  (y ekseni) karşılıklı
-def sektirme(x,y,h):
-  
-
-
-    #pid(x,y , 5 , 5 , 0 , 0.1 , 2 , -2 )
-     
+def sektirme(x,y,h,kp,kd,dt,_max):
+   
     global motorAngels
     
     global myTime
    
     global setPointH #it will get from desktop or mobile for y axes
-
+    global setPointY #it will get from desktop or mobile for y axes
+    global setPointX #it will get from desktop or mobile for y axes
+    
+    
+    global _pre_errorY
+    global _pre_errorX
+    
     global _pre_errorH
     global _integralH
     global periodH
@@ -219,98 +214,76 @@ def sektirme(x,y,h):
     millis = 0
     millis = int(round(time.time() * 1000))
     
-    dh=0
-    ki= 0.1
-    kp= 50
-    kd= 300
-    dt = 0.2
-    _max = 13
-    _min = -13
-    if(millis > myTime + period):
+    dh=50
+    _min = -1*_max
+    errorY = setPointY - y
+    errorX = setPointX - x
+    PoutY = kp * errorY
+    PoutX= kp * errorX
+    '''
+    errorH = setPointH - h
+    PoutH = kp * errorH
+    '''
+    derivativeY = (errorY - _pre_errorY) / dt
+    DoutY = kd * derivativeY
+        
+    derivativeX = (errorX - _pre_errorX) / dt
+    DoutX = kd * derivativeX
+    '''
+    derivativeH = (errorH - _pre_errorH) / dt
+    DoutH = kd * derivativeH
+    ''' 
+    _pre_errorY = errorY
+    _pre_errorX = errorX
+    #_pre_errorH = errorH
+    
+    outputY = PoutY + DoutY
+    outputX = PoutX + DoutX
+    #outputH = PoutH + DoutH
+    
+    
+    dy= (outputY+10000)/(20000)*(_max*2)-_max
+    dx= (outputX+10000)/(20000)*(_max*2)-_max
+    
+    periodH= ((h-20)/(30))*(900)+100
+    print ("periodH:" + periodH)
+    if (periodH < 70 ):
+        periodH = 50
+    periodH = 70
+    if(millis > myTime + periodH):
         myTime= int(round(time.time() * 1000))
-        
-        errorH = setPointH - h
-       
-        PoutH= kp * errorH
-       
-        _integralH += errorH * ki
-        IoutH = _integralH
-   
+        print('if 111111')
+        #ser.write(str.encode(str(dy+dh)+":"+str(dx+dh)+":"+str(dh-dx)+":"+str(dh-dy)+":30000:6000\n"))
+        ser.write(str.encode(str(10)+":"+str(10)+":"+str(10)+":"+str(10)+":30000:6000\n"))
+    if(millis > myTime + (periodH*0.5)):
+        print('if 22222')
+        ser.write(str.encode(str(0)+":"+str(0)+":"+str(0)+":"+str(0)+":30000:6000\n"))
+        #ser.write(str.encode(str((dy+dh)*-1)+":"+str((dx+dh)*-1)+":"+str((dh-dx)*-1)+":"+str((dh-dy)*-1)+":30000:6000\n")
 
-        derivativeH = (errorH - _pre_errorH) / dt
-        DoutH = kd * derivativeH
-        
-       
-
-        # Calculate total output
-        if(errorH > -15 or errorH < 15):
-            IoutH = 0
-        
-        
-        outputH = PoutH + IoutH +DoutH
-      
-
-        _pre_errorH = errorH
-      
-        
-        print(str(outputH) +" :::: "+str(errorH)+"\n")
-        
-        temp = 200
-        if(outputH < 0):
-            dh = math.sqrt(-1*outputH/temp)
-            dh = int(dh*-1)
-        else:
-            dh = int(math.sqrt(outputH/temp))
-       
-        #dy =  int((outputY +3000) * (axisX) / (6000) + axisY)
-        #dx =  int((outputX +3000) * (axisX) / (6000) + axisY)
-        
-        if(dh > _max):
-            dh=_max
-        if(dh < _min):
-            dh=_min
-        
-            
-        
-        dx=0
-        dy=0
-        print(str(dh)+"\n")
-        if(x<100):
-            dx=-2
-        elif(x>220):
-            dx=2
-        else:
-            dx=0
-            
-        if(y<100):
-            dy=-2
-        elif(y>220):
-            dy=2
-        else:
-            dy=0
-        ser.write(str.encode(str(dh+dy)+":"+str(dh+dx)+":"+str(dh-dx)+":"+str(dh-dy)+":3000\n"))
-        
 def recv(x):
     global mode
     data2 = ""
     
     while True:
-        print("Receiver Started!")
+        #print("Receiver Started!")
         # server'dan gelen veriyi tutan degisken ------------
         data2 = sock.recv(1024).decode()
-        
+        print (data2)
         #if not data2: sys.exit(0)
         if "DATAS" not in data2:
             if "has connected" not in data2:
+                
                 arr = data2.split()
-                mode = int(arr[1])
-                print(str(arr[0]) + ", " + str(arr[1]) + ", " + str(arr[2]) + "," + str(arr[3]))
+                if str(arr[0])=='D':
+                    mode = str(arr[1])
+                    #print(str(arr[0]) + ", " + str(arr[1]) + ", " + str(arr[2]) + "," + str(arr[3]))
                 
              
         #time.sleep(.1)
                 
-availableFunction= threading.Semaphore(10)
+#availableFunction= threading.Semaphore(10)
 def sendData(data):
+    #print(data)
     sockSender = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sockSender.connect((host, port))    
     sockSender.send(data.encode())
@@ -336,18 +309,18 @@ def main(msg):
     
     ki= 0.1
     kp= 30
-    kd= 50
+    kd= 20
     dt = 0.2
-    _max = 13
-    _min = -13
-    
-    ready = 0
+    _max = 300
+    _min = -300    
+    ready = 1
     counter = 0
     
-    
+    #mesut()
     while True :
-        print("main start")
+        #print("main start")
         ##mode = get_mode()
+        ser.flush()
         x , y , h = video(cap)
         if(x != 0):
             px = x
@@ -360,48 +333,48 @@ def main(msg):
 #         ser.write("0:0:0:0:1000")
 #         time.sleep(2)
         #print(str(px)+"\t"+str(py)+"\t"+str(h)+"\n")
-        if(mode == 1): # 
+        if(mode == '1'): # 
             pid(px,py,kp,kd,ki,dt,_max,_min)
-        elif(mode == 2):
-            print('sektirme ')
+        elif(mode == '2'):
+            #print('sektirme ')
             if(ready == 0):
                 pid(px,py,30,50,0.01,dt,_max,_min)
                 if(px < setPointX+100 and px >= setPointX-100 and py < setPointY+100 and py >= setPointY-100):
                     if(counter == 200):
-                        ser.write("0:0:0:0:10000\n")
+                        #ser.write("0:0:0:0:10000\n")
                         #ser.write("-18:-18:-18:-18:10000\n")
                         ready = 1
                     counter = counter +1
                 else:
                     counter = 0
             if(ready == 1):    
-                sektirme(px,py,h)
+                sektirme(px,py,h,20,50,0.2,50)
       
                 
 
-try:
+#try:
     
     
     #kilitle
    # thread.start_new_thread(sendData, ('msg', ))
     #kilidi ac
-   t= threading.Thread(target=main, args=(1,))
+   #t= threading.Thread(target=main, args=(1,))
    
    
-   t2= threading.Thread(target=recv, args=(1,))
+   #t2= threading.Thread(target=recv, args=(1,))
    
    
-   t.start()
-   t2.start()
+   #t.start()
+   #t2.start()
    
-   t.join()
-   t2.join()
-except:
-    print("Error: unable to start thread")
+   #t.join()
+   #t2.join()
+#except:
+    #print("Error: unable to start thread")
 
 
-#if __name__== "__main__":
-    #main()
+if __name__== "__main__":
+    main(1)
 
     
 
