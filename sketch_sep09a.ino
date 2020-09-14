@@ -16,7 +16,7 @@
 #define EN 8 
 #define init_pos 400  
 
-#define _BUFF_SIZE 1024 
+#define _BUFF_SIZE 256
 
 
 char _buffer[_BUFF_SIZE];
@@ -34,37 +34,49 @@ void setup() {
   Serial.begin(9600);
   pinMode(EN,OUTPUT);
   digitalWrite(EN,LOW);
-  
   go_to(init_pos,init_pos,init_pos,init_pos,5000.0,5000.0);
-  
+
 }
 
 void loop() {
   while (Serial.available() > 0) {
     char ch = Serial.read();
-    if(ch == '\n'){
-      _buffer[counter++] = 0 ;      
-      char *temp = strtok(_buffer,":");
-      x = atoi(temp) + init_pos ;
-      temp = NULL ;
-      temp = strtok(0,":");
-      y = atoi(temp) + init_pos;
-      temp = NULL ;
-      temp = strtok(0,":");
-      z = atoi(temp) + init_pos;
-      temp = NULL ;
-      temp = strtok(0,":");
-      a = atoi(temp) + init_pos;
-      temp=NULL;
-      temp = strtok(0,":");
-      acceleration = (double)atoi(temp);
-      temp=NULL;
-      temp = strtok(0,":");
-      s = (double)atoi(temp);
-      temp=NULL;
+    if(ch == '\n'){     
+      _buffer[counter++] = 0 ; 
+      counter = 0 ; 
+    
+      int j = 0 , k = 0;
+      char temp[20];
+      int comot[6];
+      for(int i = 0 ; _buffer[i] != '\0' ; i++){
+        
+      int counter=0;
       
-      go_to(x,y,z,a,s,acceleration);
-      counter = 0 ;
+      for(int k=0;k<10;k++){
+          if(_buffer[i]!=':'){
+           
+            temp[k]=_buffer[i++];
+          }else{
+            temp[k]=0;
+            break;
+          }
+        }
+
+      
+        
+        comot[k++]=atoi(temp);
+       
+      }
+      
+      x=comot[0]+init_pos;
+      y=comot[1]+init_pos;
+      z=comot[2]+init_pos;
+      a=comot[3]+init_pos;
+      acceleration=(double)comot[4];
+      s=(double)comot[5];  
+      if(k==6){
+        go_to(x,y,z,a,s,acceleration);
+      }
       
     }
     else{
@@ -79,8 +91,6 @@ void loop() {
 }
 
 void go_to(int x , int y , int z , int a , double _speed , double acceleration){
-  
-  
   stepperX.setMaxSpeed(_speed);
   stepperX.setAcceleration(acceleration);
   stepperX.moveTo(x);
